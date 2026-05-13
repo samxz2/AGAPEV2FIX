@@ -1,6 +1,6 @@
 import { reactive } from 'vue';
 
-export const TASA_BCV = 630.00;  
+export const TASA_BCV = 650.00;  
 
 const cargarMonedaGuardada = () => {
   if (typeof window !== 'undefined') {
