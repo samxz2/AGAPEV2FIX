@@ -7,7 +7,7 @@ export const perfumes = [
     oldPrice: null,
     precioOferta: null,
     enOferta: false,
-    estadoEnvio: "proximamente",
+    estadoEnvio: "disponible",
     descripcion: `· Consulta precios al mayor para emprendedores.
 · Para pagos en bolívares consultar precio.`,
     intensidad: "Alta",
