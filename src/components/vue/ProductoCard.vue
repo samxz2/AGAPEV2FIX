@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useCarritoStore } from '../../store/carrito';
-import { useFavoritosStore } from '../../store/favoritos';
 import { useMonedaStore } from '../../store/moneda';
 import ProductoModal from './ProductoModal.vue';
 import { ShoppingCart, Package, Heart } from 'lucide-vue-next';
@@ -11,7 +10,6 @@ const props = defineProps({
 });
 
 const carritoStore = useCarritoStore();
-const favoritosStore = useFavoritosStore();
 const monedaStore = useMonedaStore();
 
 const modalAbierto = ref(false);
@@ -100,16 +98,6 @@ onUnmounted(() => {
     <div :class="[estado.bg, 'absolute top-2 right-2 z-10 px-2 py-1 rounded-full text-xs font-bold']">
       <span :class="estado.color">{{ estado.texto }}</span>
     </div>
-    
-    <button 
-      @click.stop="toggleFavorito"
-      class="absolute bottom-2 right-2 z-10 bg-black/50 rounded-full p-2 hover:scale-110 transition-all"
-    >
-      <Heart 
-        class="w-5 h-5" 
-        :class="esFavorito ? 'fill-red-500 text-red-500' : 'text-white'"
-      />
-    </button>
     
     <div class="h-64 bg-gradient-to-br from-surface to-background flex items-center justify-center relative overflow-hidden">
       <img 
