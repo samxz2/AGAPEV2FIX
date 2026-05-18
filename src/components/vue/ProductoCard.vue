@@ -1,19 +1,13 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useCarritoStore } from '../../store/carrito';
 import { useMonedaStore } from '../../store/moneda';
 import ProductoModal from './ProductoModal.vue';
 import { ShoppingCart, Package } from 'lucide-vue-next';
 
 const props = defineProps({
-  producto: {
-    type: Object,
-    required: true
-  }
+  producto: Object
 });
-
-// 🔧 ANTI-DUPLICACIÓN: ID único para esta instancia
-const instanceId = `card-${props.producto.id}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
 
 const carritoStore = useCarritoStore();
 const monedaStore = useMonedaStore();
@@ -22,10 +16,10 @@ const modalAbierto = ref(false);
 const mostrarNotificacion = ref(false);
 const productoAgregado = ref('');
 const imagenError = ref(false);
+const esFavorito = ref(false);
 const precioFormateado = ref('');
 const precioOfertaFormateado = ref('');
 const oldPrecioFormateado = ref('');
-const estaMontado = ref(false);
 
 const estadoConfig = {
   disponible: { texto: "Disponible", color: "text-green-500", bg: "bg-green-500/10", sePuedeComprar: true },
@@ -33,58 +27,33 @@ const estadoConfig = {
   proximamente: { texto: "Próximamente", color: "text-blue-500", bg: "bg-blue-500/10", sePuedeComprar: false }
 };
 
-const estado = computed(() => {
-  if (!props.producto || !props.producto.estadoEnvio) {
-    return estadoConfig.disponible;
-  }
-  return estadoConfig[props.producto.estadoEnvio] || estadoConfig.disponible;
-});
+const estado = estadoConfig[props.producto.estadoEnvio] || estadoConfig.disponible;
 
 const actualizarPrecios = () => {
-  if (!estaMontado.value) return;
-  
-  try {
-    if (monedaStore && typeof monedaStore.getPrecioFormateado === 'function') {
-      precioFormateado.value = monedaStore.getPrecioFormateado(props.producto.precio);
-      if (props.producto.precioOferta) {
-        precioOfertaFormateado.value = monedaStore.getPrecioFormateado(props.producto.precioOferta);
-      }
-      if (props.producto.oldPrice) {
-        oldPrecioFormateado.value = monedaStore.getPrecioFormateado(props.producto.oldPrice);
-      }
-    } else {
-      precioFormateado.value = `$${props.producto.precio} USD`;
-      if (props.producto.precioOferta) {
-        precioOfertaFormateado.value = `$${props.producto.precioOferta} USD`;
-      }
-    }
-  } catch (error) {
-    console.warn('Error:', error);
-    precioFormateado.value = `$${props.producto.precio} USD`;
+  precioFormateado.value = monedaStore.getPrecioFormateado(props.producto.precio);
+  if (props.producto.precioOferta) {
+    precioOfertaFormateado.value = monedaStore.getPrecioFormateado(props.producto.precioOferta);
+  }
+  if (props.producto.oldPrice) {
+    oldPrecioFormateado.value = monedaStore.getPrecioFormateado(props.producto.oldPrice);
   }
 };
 
-const agregarAlCarrito = (e) => {
-  e?.stopPropagation();
-  if (!estado.value.sePuedeComprar) {
-    alert(`❌ ${estado.value.texto}. No disponible para comprar.`);
+const agregarAlCarrito = () => {
+  if (!estado.sePuedeComprar) {
+    alert(`❌ ${estado.texto}. No disponible para comprar.`);
     return;
   }
   
-  try {
-    carritoStore.agregarProducto(props.producto, 1);
-    productoAgregado.value = props.producto.nombre;
-    mostrarNotificacion.value = true;
-    setTimeout(() => {
-      mostrarNotificacion.value = false;
-    }, 2000);
-  } catch (error) {
-    console.error('Error:', error);
-  }
+  carritoStore.agregarProducto(props.producto, 1);
+  productoAgregado.value = props.producto.nombre;
+  mostrarNotificacion.value = true;
+  setTimeout(() => {
+    mostrarNotificacion.value = false;
+  }, 2000);
 };
 
-const abrirModal = (e) => {
-  e?.stopPropagation();
+const abrirModal = () => {
   modalAbierto.value = true;
 };
 
@@ -101,21 +70,17 @@ const actualizarMoneda = () => {
 };
 
 onMounted(() => {
-  estaMontado.value = true;
   actualizarPrecios();
   window.addEventListener('moneda-cambiada', actualizarMoneda);
 });
 
 onUnmounted(() => {
-  estaMontado.value = false;
   window.removeEventListener('moneda-cambiada', actualizarMoneda);
 });
 </script>
 
 <template>
   <div 
-    v-if="producto"
-    :data-id="instanceId"
     class="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group border border-primary-dark/30 hover:border-primary relative flex flex-col h-full"
     @click="abrirModal"
   >
@@ -136,7 +101,6 @@ onUnmounted(() => {
         :src="props.producto.imagen" 
         :alt="props.producto.nombre"
         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        loading="lazy"
         @error="handleImageError"
       />
       <div v-else class="text-center p-4">
@@ -152,22 +116,28 @@ onUnmounted(() => {
         {{ producto.nombre }}
       </h3>
       
-      <!-- Descripción -->
+      <!-- Descripción (oculta en móvil muy pequeño, visible en tablet/desktop) -->
       <p class="text-text-muted text-xs sm:text-sm mb-3 line-clamp-2 hidden sm:block">
         {{ producto.descripcion }}
       </p>
       
-      <!-- PRECIO -->
+      <!-- PRECIO - MUY VISIBLE EN MÓVIL -->
       <div class="mt-auto pt-3">
+        <!-- Versión oferta -->
         <div v-if="producto.enOferta && producto.estadoEnvio === 'disponible'" class="flex flex-wrap items-baseline gap-2 mb-3">
           <span class="text-text-muted line-through text-sm sm:text-base">{{ oldPrecioFormateado || precioFormateado }}</span>
           <span class="text-2xl sm:text-3xl font-bold text-red-500">{{ precioOfertaFormateado }}</span>
         </div>
+        
+        <!-- Versión normal -->
         <div v-else class="mb-3">
           <span class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary block text-center sm:text-left">
             {{ precioFormateado }}
           </span>
         </div>
+        
+        <!-- Línea decorativa para destacar el precio en móvil -->
+        <div class="w-12 h-0.5 bg-primary/30 mx-auto sm:mx-0 mb-3 sm:hidden"></div>
         
         <!-- Botón -->
         <button 
@@ -184,21 +154,18 @@ onUnmounted(() => {
   
   <!-- Modal -->
   <ProductoModal 
-    v-if="producto"
     :producto="producto" 
     :abierto="modalAbierto" 
     @cerrar="cerrarModal"
   />
 
   <!-- Notificación flotante -->
-  <Teleport to="body">
-    <div 
-      v-if="mostrarNotificacion"
-      class="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-full shadow-lg z-50 text-sm sm:text-base whitespace-nowrap"
-    >
-      ✓ {{ productoAgregado }} agregado
-    </div>
-  </Teleport>
+  <div 
+    v-if="mostrarNotificacion"
+    class="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-full shadow-lg z-50 text-sm sm:text-base whitespace-nowrap"
+  >
+    ✓ {{ productoAgregado }} agregado
+  </div>
 </template>
 
 <style scoped>
