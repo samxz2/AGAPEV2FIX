@@ -8,10 +8,12 @@ import { ShoppingCart, Package } from 'lucide-vue-next';
 const props = defineProps({
   producto: {
     type: Object,
-    required: true,
-    default: () => ({})
+    required: true
   }
 });
+
+// ID único para esta instancia
+const instanceId = `card-${props.producto.id}-${Date.now()}-${Math.random()}`;
 
 const carritoStore = useCarritoStore();
 const monedaStore = useMonedaStore();
@@ -23,47 +25,41 @@ const imagenError = ref(false);
 const precioFormateado = ref('');
 const precioOfertaFormateado = ref('');
 const oldPrecioFormateado = ref('');
+const estaMontado = ref(false);
 
-// ✅ CONFIGURACIÓN SEGURA con valores por defecto
 const estadoConfig = {
   disponible: { texto: "Disponible", color: "text-green-500", bg: "bg-green-500/10", sePuedeComprar: true },
   transito: { texto: "En camino", color: "text-yellow-500", bg: "bg-yellow-500/10", sePuedeComprar: false },
   proximamente: { texto: "Próximamente", color: "text-blue-500", bg: "bg-blue-500/10", sePuedeComprar: false }
 };
 
-// ✅ COMPUTED que maneja undefined correctamente
 const estado = computed(() => {
-  // Si no hay producto o no tiene estadoEnvio, usar disponible por defecto
   if (!props.producto || !props.producto.estadoEnvio) {
     return estadoConfig.disponible;
   }
-  // Buscar en estadoConfig, si no existe, usar disponible
   return estadoConfig[props.producto.estadoEnvio] || estadoConfig.disponible;
 });
 
 const actualizarPrecios = () => {
-  if (!monedaStore || typeof monedaStore.getPrecioFormateado !== 'function') {
-    // Fallback si el store no está listo
-    precioFormateado.value = `$${props.producto?.precio || 0} USD`;
-    if (props.producto?.precioOferta) {
-      precioOfertaFormateado.value = `$${props.producto.precioOferta} USD`;
-    }
-    if (props.producto?.oldPrice) {
-      oldPrecioFormateado.value = `$${props.producto.oldPrice} USD`;
-    }
-    return;
-  }
+  if (!estaMontado.value) return;
   
   try {
-    precioFormateado.value = monedaStore.getPrecioFormateado(props.producto?.precio || 0);
-    if (props.producto?.precioOferta) {
-      precioOfertaFormateado.value = monedaStore.getPrecioFormateado(props.producto.precioOferta);
-    }
-    if (props.producto?.oldPrice) {
-      oldPrecioFormateado.value = monedaStore.getPrecioFormateado(props.producto.oldPrice);
+    if (monedaStore && typeof monedaStore.getPrecioFormateado === 'function') {
+      precioFormateado.value = monedaStore.getPrecioFormateado(props.producto?.precio || 0);
+      if (props.producto?.precioOferta) {
+        precioOfertaFormateado.value = monedaStore.getPrecioFormateado(props.producto.precioOferta);
+      }
+      if (props.producto?.oldPrice) {
+        oldPrecioFormateado.value = monedaStore.getPrecioFormateado(props.producto.oldPrice);
+      }
+    } else {
+      precioFormateado.value = `$${props.producto?.precio || 0} USD`;
+      if (props.producto?.precioOferta) {
+        precioOfertaFormateado.value = `$${props.producto.precioOferta} USD`;
+      }
     }
   } catch (error) {
-    console.warn('Error actualizando precios:', error);
+    console.warn('Error:', error);
     precioFormateado.value = `$${props.producto?.precio || 0} USD`;
   }
 };
@@ -85,7 +81,7 @@ const agregarAlCarrito = (e) => {
       }, 2000);
     }
   } catch (error) {
-    console.error('Error al agregar al carrito:', error);
+    console.error('Error:', error);
   }
 };
 
@@ -102,23 +98,20 @@ const handleImageError = () => {
   imagenError.value = true;
 };
 
-const actualizarMoneda = () => {
-  actualizarPrecios();
-};
-
 onMounted(() => {
+  estaMontado.value = true;
   actualizarPrecios();
-  window.addEventListener('moneda-cambiada', actualizarMoneda);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('moneda-cambiada', actualizarMoneda);
+  estaMontado.value = false;
 });
 </script>
 
 <template>
   <div 
     v-if="producto"
+    :data-id="instanceId"
     class="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group border border-primary-dark/30 hover:border-primary relative flex flex-col h-full"
     @click="abrirModal"
   >
@@ -127,7 +120,7 @@ onUnmounted(() => {
       🔥 OFERTA
     </div>
     
-    <!-- Badge de estado - USANDO COMPUTED SEGURO -->
+    <!-- Badge de estado -->
     <div :class="[estado.bg, 'absolute top-2 right-2 z-10 px-2 py-1 rounded-full text-xs font-bold']">
       <span :class="estado.color">{{ estado.texto }}</span>
     </div>
@@ -148,19 +141,16 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <!-- Contenido de la card -->
+    <!-- Contenido -->
     <div class="p-4 sm:p-5 flex flex-col flex-grow">
-      <!-- Título -->
       <h3 class="font-bold text-base sm:text-lg md:text-xl mb-2 text-text group-hover:text-primary transition-colors line-clamp-2">
         {{ producto.nombre }}
       </h3>
       
-      <!-- Descripción -->
       <p class="text-text-muted text-xs sm:text-sm mb-3 line-clamp-2 hidden sm:block">
         {{ producto.descripcion }}
       </p>
       
-      <!-- PRECIO -->
       <div class="mt-auto pt-3">
         <div v-if="producto.enOferta && producto.estadoEnvio === 'disponible'" class="flex flex-wrap items-baseline gap-2 mb-3">
           <span class="text-text-muted line-through text-sm sm:text-base">{{ oldPrecioFormateado || precioFormateado }}</span>
@@ -172,7 +162,6 @@ onUnmounted(() => {
           </span>
         </div>
         
-        <!-- Botón -->
         <button 
           @click.stop="agregarAlCarrito"
           :disabled="!estado.sePuedeComprar"
@@ -185,7 +174,6 @@ onUnmounted(() => {
     </div>
   </div>
   
-  <!-- Modal -->
   <ProductoModal 
     v-if="producto"
     :producto="producto" 
@@ -193,7 +181,6 @@ onUnmounted(() => {
     @cerrar="cerrarModal"
   />
 
-  <!-- Notificación flotante -->
   <Teleport to="body">
     <div 
       v-if="mostrarNotificacion"
