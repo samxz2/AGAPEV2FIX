@@ -158,6 +158,7 @@ if (typeof window !== 'undefined') {
   let todosLosPerfumes = [];
   let ProductoCardComponent = null;
   let createApp = null;
+  let mountedApps = []; // Array para guardar y limpiar apps montadas
   
   const normalContent = document.getElementById('normalContent');
   const searchResultsContainer = document.getElementById('searchResultsContainer');
@@ -172,6 +173,36 @@ if (typeof window !== 'undefined') {
   const normalCount = document.getElementById('normalCount');
   
   let modoBusqueda = false;
+  
+  // ========== FUNCIÓN CRÍTICA: Limpiar todas las apps Vue montadas ==========
+  const limpiarTodasLasApps = () => {
+    mountedApps.forEach(app => {
+      try {
+        if (app && app.unmount) {
+          app.unmount();
+        }
+      } catch(e) {
+        console.warn('Error limpiando app:', e);
+      }
+    });
+    mountedApps = [];
+  };
+  
+  // ========== Limpiar un contenedor específico ==========
+  const limpiarContenedor = (contenedor) => {
+    if (!contenedor) return;
+    // Guardar referencia a los hijos antes de limpiar
+    const hijos = contenedor.children;
+    for (let i = 0; i < hijos.length; i++) {
+      const hijo = hijos[i];
+      if (hijo.__vue_app__) {
+        try {
+          hijo.__vue_app__.unmount();
+        } catch(e) {}
+      }
+    }
+    contenedor.innerHTML = '';
+  };
   
   const ordenarProductos = (productos, criterio) => {
     const productosCopy = [...productos];
@@ -218,8 +249,8 @@ if (typeof window !== 'undefined') {
     
     let resultados = todosLosPerfumes.filter(p => 
       p.nombre.toLowerCase().includes(termino) ||
-      p.descripcion.toLowerCase().includes(termino) ||
-      p.categoria.toLowerCase().includes(termino)
+      (p.descripcion && p.descripcion.toLowerCase().includes(termino)) ||
+      (p.categoria && p.categoria.toLowerCase().includes(termino))
     );
     
     resultados = filtrarPorEstado(resultados, estado);
@@ -238,17 +269,22 @@ if (typeof window !== 'undefined') {
     resultadosCount.textContent = resultados.length;
     clearSearchBtn.classList.remove('hidden');
     
+    // LIMPIAR TODO ANTES DE RENDERIZAR NUEVOS RESULTADOS
+    limpiarContenedor(searchResultsGrid);
+    
     if (resultados.length === 0) {
       searchResultsGrid.innerHTML = '<div class="col-span-full text-center text-text-muted py-12">No se encontraron perfumes</div>';
       return;
     }
     
-    searchResultsGrid.innerHTML = '';
-    
+    // Renderizar cada resultado
     for (const producto of resultados) {
       const cardDiv = document.createElement('div');
       searchResultsGrid.appendChild(cardDiv);
-      createApp(ProductoCardComponent, { producto }).mount(cardDiv);
+      const app = createApp(ProductoCardComponent, { producto });
+      app.mount(cardDiv);
+      mountedApps.push(app);
+      cardDiv.__vue_app__ = app;
     }
   };
   
@@ -271,23 +307,30 @@ if (typeof window !== 'undefined') {
     
     const productosContainer = document.getElementById('productosContainer');
     
-    productosContainer.innerHTML = '';
+    // LIMPIAR TODO ANTES DE RENDERIZAR
+    limpiarContenedor(productosContainer);
     
+    // Renderizar cada producto
     for (const producto of productosFiltrados) {
       const cardDiv = document.createElement('div');
       productosContainer.appendChild(cardDiv);
-      createApp(ProductoCardComponent, { producto }).mount(cardDiv);
+      const app = createApp(ProductoCardComponent, { producto });
+      app.mount(cardDiv);
+      mountedApps.push(app);
+      cardDiv.__vue_app__ = app;
     }
   };
   
-  const cargarPerfiles = async () => {
+  const cargarPerfumes = async () => {
     const module = await import('../data/perfumes.js');
     todosLosPerfumes = module.perfumes;
     actualizarProductosNormales();
   };
   
-  cargarPerfiles();
+  // Iniciar
+  cargarPerfumes();
   
+  // Event listeners
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       modoBusqueda = e.target.value.trim().length > 0;
