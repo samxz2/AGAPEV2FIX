@@ -8,13 +8,12 @@ import ReportarProblema from '../components/vue/ReportarProblema.vue';
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Agape Collection Parfum - Perfumería Exclusiva</title>
     <meta name="description" content="Descubre nuestra colección exclusiva de perfumes para caballero, dama y unisex. Fragancias 100% originales en Venezuela." />
     <meta name="keywords" content="perfumes, fragancias, agape collection, perfumes venezuela, perfumes originales" />
     <meta name="author" content="Agape Collection Parfum" />
-    
-    <!-- ANTI-CACHÉ PARA CHROME MÓVIL - Evita duplicación de cards -->
+
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -112,8 +111,7 @@ import ReportarProblema from '../components/vue/ReportarProblema.vue';
           <p>&copy; 2026 Agape Collection Parfum | Todos los derechos reservados</p>
           <p class="text-xs mt-1">💬 WhatsApp +58 412-7050149 | 📦 Envíos a toda Venezuela | Fragancias 100% originales | Las marcas mencionadas son propiedad de sus respectivos fabricantes.</p>
         </div>
-      </div>
-    </footer>
+        
 
     <!-- Botón Volver Arriba -->
     <button 
@@ -129,7 +127,6 @@ import ReportarProblema from '../components/vue/ReportarProblema.vue';
     <!-- Botón Reportar Problema -->
     <ReportarProblema client:only="vue" />
 
-    <!-- Scripts de funcionalidad -->
     <script>
       (function() {
         // ========== MENÚ HAMBURGUESA ==========
@@ -186,55 +183,6 @@ import ReportarProblema from '../components/vue/ReportarProblema.vue';
           backToTopBtn.addEventListener('click', () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           });
-        }
-      })();
-    </script>
-
-    <!-- SCRIPT ESPECIAL PARA CORREGIR CHROME MÓVIL (EVITA DUPLICACIÓN DE CARDS) -->
-    <script>
-      (function() {
-        // Detectar Chrome en Android
-        const isChromeMobile = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent) && /Android/.test(navigator.userAgent);
-        
-        if (isChromeMobile) {
-          // Forzar reflow después de que cargue todo
-          window.addEventListener('load', function() {
-            // Esto fuerza a Chrome a recalcular todos los estilos y posiciones
-            document.body.style.transform = 'translateZ(0)';
-            setTimeout(function() {
-              document.body.style.transform = '';
-            }, 100);
-            
-            // Forzar redibujado de todas las cards
-            const cards = document.querySelectorAll('.producto-card, .bg-card');
-            cards.forEach(function(card) {
-              if (card) {
-                card.style.opacity = '0.99';
-                setTimeout(function() {
-                  if (card) card.style.opacity = '1';
-                }, 50);
-              }
-            });
-          });
-          
-          // Limpiar service workers que puedan estar causando problemas
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for (var i = 0; i < registrations.length; i++) {
-                registrations[i].unregister();
-                console.log('Service Worker desregistrado para corregir Chrome');
-              }
-            });
-          }
-          
-          // Limpiar caché de imágenes y scripts
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              for (var name of names) {
-                caches.delete(name);
-              }
-            });
-          }
         }
       })();
     </script>

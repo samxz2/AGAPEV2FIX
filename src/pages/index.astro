@@ -2,8 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import Carrito from '../components/vue/Carrito.vue';
 import BestSellers from '../components/vue/BestSellers.vue';
-import ProductoCard from '../components/vue/ProductoCard.vue';
 import { perfumes } from '../data/perfumes.js';
+// NOTA: ProductoCard ya NO se importa directamente, se usará desde el script
 ---
 
 <Layout>
@@ -88,17 +88,13 @@ import { perfumes } from '../data/perfumes.js';
     </div>
   </div>
 
-  <!-- Contenido normal -->
+  <!-- Contenido normal - Contenedor VACÍO (Vue lo llenará) -->
   <div id="normalContent">
     <section class="container mx-auto px-4 py-16">
       <h2 class="text-3xl font-bold text-primary mb-8 text-center">Todos Nuestros Perfumes</h2>
       
-      <!-- TODOS los perfumes se muestran desde el inicio -->
-      <div id="productosContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {perfumes.map(perfume => (
-          <ProductoCard producto={perfume} client:load />
-        ))}
-      </div>
+      <!-- Contenedor vacío - Vue montará las cards aquí -->
+      <div id="productosContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
 
       <p class="text-center text-text-muted text-sm mt-8">
         Mostrando <span id="normalCount">{perfumes.length}</span> de {perfumes.length} productos
@@ -149,6 +145,7 @@ import { perfumes } from '../data/perfumes.js';
       </div>
     </section>
 
+    <BestSellers client:load />
   </div>
 </Layout>
 
@@ -158,6 +155,7 @@ if (typeof window !== 'undefined') {
   let todosLosPerfumes = [];
   let ProductoCardComponent = null;
   let createApp = null;
+  let mountedApps = []; // Para limpiar apps montadas
   
   const normalContent = document.getElementById('normalContent');
   const searchResultsContainer = document.getElementById('searchResultsContainer');
@@ -172,6 +170,14 @@ if (typeof window !== 'undefined') {
   const normalCount = document.getElementById('normalCount');
   
   let modoBusqueda = false;
+  
+  // Limpiar todas las apps Vue montadas
+  const limpiarApps = () => {
+    mountedApps.forEach(app => {
+      try { app.unmount(); } catch(e) {}
+    });
+    mountedApps = [];
+  };
   
   const ordenarProductos = (productos, criterio) => {
     const productosCopy = [...productos];
@@ -218,8 +224,8 @@ if (typeof window !== 'undefined') {
     
     let resultados = todosLosPerfumes.filter(p => 
       p.nombre.toLowerCase().includes(termino) ||
-      p.descripcion.toLowerCase().includes(termino) ||
-      p.categoria.toLowerCase().includes(termino)
+      (p.descripcion && p.descripcion.toLowerCase().includes(termino)) ||
+      (p.categoria && p.categoria.toLowerCase().includes(termino))
     );
     
     resultados = filtrarPorEstado(resultados, estado);
@@ -238,17 +244,21 @@ if (typeof window !== 'undefined') {
     resultadosCount.textContent = resultados.length;
     clearSearchBtn.classList.remove('hidden');
     
+    // Limpiar resultados anteriores
+    limpiarApps();
+    searchResultsGrid.innerHTML = '';
+    
     if (resultados.length === 0) {
       searchResultsGrid.innerHTML = '<div class="col-span-full text-center text-text-muted py-12">No se encontraron perfumes</div>';
       return;
     }
     
-    searchResultsGrid.innerHTML = '';
-    
     for (const producto of resultados) {
       const cardDiv = document.createElement('div');
       searchResultsGrid.appendChild(cardDiv);
-      createApp(ProductoCardComponent, { producto }).mount(cardDiv);
+      const app = createApp(ProductoCardComponent, { producto });
+      app.mount(cardDiv);
+      mountedApps.push(app);
     }
   };
   
@@ -271,23 +281,29 @@ if (typeof window !== 'undefined') {
     
     const productosContainer = document.getElementById('productosContainer');
     
+    // Limpiar contenedor y apps anteriores
+    limpiarApps();
     productosContainer.innerHTML = '';
     
     for (const producto of productosFiltrados) {
       const cardDiv = document.createElement('div');
       productosContainer.appendChild(cardDiv);
-      createApp(ProductoCardComponent, { producto }).mount(cardDiv);
+      const app = createApp(ProductoCardComponent, { producto });
+      app.mount(cardDiv);
+      mountedApps.push(app);
     }
   };
   
-  const cargarPerfiles = async () => {
+  const cargarPerfumes = async () => {
     const module = await import('../data/perfumes.js');
     todosLosPerfumes = module.perfumes;
     actualizarProductosNormales();
   };
   
-  cargarPerfiles();
+  // Iniciar
+  cargarPerfumes();
   
+  // Event listeners
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       modoBusqueda = e.target.value.trim().length > 0;
