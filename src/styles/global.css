@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream-50: #fdf8f0;
+  --color-cream-100: #faefde;
+  --color-cream-200: #f5dfbd;
+  --color-cream-300: #edc68a;
+  --color-cream-400: #e0a84e;
+  
+  --color-brown-50: #f6efe8;
+  --color-brown-100: #e8d5c3;
+  --color-brown-200: #d4b394;
+  --color-brown-300: #b8895e;
+  --color-brown-400: #9e6d41;
+  --color-brown-500: #84562e;
+  --color-brown-600: #6b4221;
+  --color-brown-700: #533117;
+  --color-brown-800: #3d220f;
+  --color-brown-900: #2a1509;
+
+  --font-playfair: "Playfair Display", serif;
+  --font-lato: "Lato", sans-serif;
+}
+
+/* Animaciones globales */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+  
+  .animate-slide-down {
+    animation: slideDown 0.6s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.5s ease-out forwards;
+  }
+  
+  .animate-blur-in {
+    animation: blurIn 0.8s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes blurIn {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+/* Scroll suave para toda la página */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Loading skeleton animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0e4d4 25%, #e8d5c3 50%, #f0e4d4 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
